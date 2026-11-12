@@ -36,7 +36,7 @@ def make_packet(pkt_size, outer_vlan=0, inner_vlan=0, vni=0,
     ip_dst = IP_DST if ip_dst is None else ip_dst
     ip_proto = IP_PROTO if ip_proto is None else ip_proto
     eth_src = DL_SRC if eth_src is None else eth_src
-    eth_dst = DL_SRC if eth_dst is None else eth_dst
+    eth_dst = DL_DST if eth_dst is None else eth_dst
     eth_type = ether.ETH_TYPE_IP if eth_type is None else eth_type
     udp_src_port = UDP_SRC_PORT if udp_src_port is None else udp_src_port
     udp_dst_port = UDP_DST_PORT if udp_dst_port is None else udp_dst_port
@@ -69,9 +69,12 @@ def make_packet(pkt_size, outer_vlan=0, inner_vlan=0, vni=0,
         vxlan_tag = vxlan.vxlan(vni)
         vxlan_len = len(vxlan_tag)
 
-    payload_size = pkt_size - (len(e) + len(i) + len(u)
-                               + inner_len + outer_len + vxlan_len)
-    payload = bytearray(payload_size if payload_size > 0 else 0)
+    header_size = (len(e) + len(i) + len(u)
+                   + inner_len + outer_len + vxlan_len)
+    if pkt_size < header_size:
+        raise ValueError("pkt_size %d is smaller than headers (%d bytes)"
+                         % (pkt_size, header_size))
+    payload = bytearray(pkt_size - header_size)
 
     p = packet.Packet()
     p.add_protocol(e)
